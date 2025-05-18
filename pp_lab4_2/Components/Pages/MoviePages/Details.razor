@@ -1,0 +1,76 @@
+﻿@page "/movies/details"
+@using Microsoft.EntityFrameworkCore
+@using pp_lab4_2.Models
+@inject IDbContextFactory<pp_lab4_2.ApplicationDbContext> DbFactory
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Movie</h2>
+    <hr />
+    @if (movie is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <div class="row col-3">
+            <img src="@movie.ImageUrl" width="300" height="300" />
+        </div>
+        <dl class="row">
+            <dt class="col-sm-2">Title</dt>
+            <dd class="col-sm-10">@movie.Title</dd>
+            <dt class="col-sm-2">Description</dt>
+            <dd class="col-sm-10">@movie.Description</dd>
+            <dt class="col-sm-2">ReleaseDate</dt>
+            <dd class="col-sm-10">@movie.ReleaseDate</dd>
+            <dt class="col-sm-2" disabled>Rate</dt>
+            <dd class="col-sm-10">@movie.Rate</dd>
+            <dt class="col-sm-2">ImageUrl</dt>
+
+            <label>Dodaj ocenę:</label>
+            <input type="number" min="0" max="10" @bind="newRating" step="0.1" class="form-control" style="width:100px; display:inline-block;" />
+            <button class="btn btn-primary ms-2" @onclick="AddRating">Dodaj Ocenę</button>
+        </dl>
+        <div>
+            <a href="@($"/movies/edit?id={movie.Id}")">Edit</a> |
+            <a href="@($"/movies")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    private Movie? movie;
+    private float newRating;
+
+    private async void AddRating()
+    {
+        using var Db = await DbFactory.CreateDbContextAsync();
+        if (movie is null) 
+            return;
+
+        movie.TotalRate += newRating;
+        movie.RatingCount += 1;
+
+        Db.Movies.Update(movie);
+        await Db.SaveChangesAsync();
+        await OnInitializedAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        movie = await context.Movies.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (movie is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}
